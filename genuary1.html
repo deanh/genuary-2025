@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Animation Demo</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #333;
+        }
+        canvas {
+            background: #1c160d;
+            border: 0px solid #ccc;
+            /* box-shadow: 0 2px 4px rgba(0,0,0,0.1); */
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="myCanvas"></canvas>
+    <!--div class="controls">
+        <button onclick="startAnimation()">Start</button>
+        <button onclick="stopAnimation()">Stop</button>
+        <button onclick="resetAnimation()">Reset</button>
+    </div -->
+
+    <script>
+        // Animation class definition
+        const width = 512;
+        const height = 512;
+
+        class CanvasAnimation {
+            constructor(canvasId, width = width, height = height) {
+                this.canvas = document.getElementById(canvasId);
+                this.canvas.width = width;
+                this.canvas.height = height;
+                this.ctx = this.canvas.getContext('2d');
+                this.isRunning = false;
+                this.frameCount = 0;
+                this.lastTime = 0;
+                this.fps = 60;
+                this.updateCallbacks = [];
+                this.drawCallbacks = [];
+            }
+            onUpdate(callback) {
+                this.updateCallbacks.push(callback);
+                return this;
+            }
+            onDraw(callback) {
+                this.drawCallbacks.push(callback);
+                return this;
+            }
+            loop(currentTime) {
+                if (!this.isRunning) return;
+                const deltaTime = (currentTime - this.lastTime) / 1000;
+                this.lastTime = currentTime;
+                for (const callback of this.updateCallbacks) {
+                    callback(deltaTime, this.frameCount);
+                }
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                for (const callback of this.drawCallbacks) {
+                    callback(this.ctx, this.frameCount);
+                }
+                this.frameCount++;
+                requestAnimationFrame(time => this.loop(time));
+            }
+            start() {
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.lastTime = performance.now();
+                    requestAnimationFrame(time => this.loop(time));
+                }
+                return this;
+            }
+            stop() {
+                this.isRunning = false;
+                return this;
+            }
+            reset() {
+                this.frameCount = 0;
+                return this;
+            }
+        }
+
+        // Demo animation setup
+        let animation;
+        let palette = [
+            "#1dbb61",
+            "#76e671",
+            "#c4f2b5",
+            "#e3e9f2"
+        ]
+
+        const lines = Array.from({ length: width * 2}, (_, i) => ({
+            x: i % width,
+            y: height / 2 + Math.random() * 20 + Math.random() * 20 - Math.random() * 20 - Math.random() * 20 - Math.random() * 20 - Math.random() * 20,
+            length: Math.random() * (width - Math.abs(width/2 - i))/4,
+            hue: (i * 360) % 360,
+            alpha: Math.random() / 2,
+            hex: palette[i % 4]
+        }));
+
+        function initAnimation() {
+            animation = new CanvasAnimation('myCanvas', width, height)
+                .onUpdate((deltaTime, frame) => {
+                    lines.forEach(line => {
+                        //line.hue = (line.hue + 1) % 360;
+                        if (Math.random() > 0.5) { 
+                            line.y += 4 * Math.random();
+                        } else {
+                            line.y -= 4 * Math.random();
+                        }
+                    })
+                })
+                .onDraw((ctx, frame) => {
+                    lines.forEach(line => {
+                        ctx.beginPath()
+                        ctx.moveTo(line.x, line.y);
+                        ctx.lineTo(line.x, line.y + line.length);
+                        ctx.closePath();
+                        ctx.strokeStyle = line.hex
+                        ctx.stroke()
+                    })
+                });
+        }
+
+        // Initialize animation on load
+        initAnimation();
+
+        // Start animation automatically
+        animation.start();
+    </script>
+</body>
+</html>
